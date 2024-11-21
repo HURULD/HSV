@@ -13,8 +13,8 @@ type valuation = map<symbol,bool>
 
 // extracts the set of symbols from a given clause
 function symbols_clause(c:clause) : set<symbol>
-ensures (forall xb :: xb in c ==> xb.0 in symbols_clause(c))
-ensures (forall x :: (x in symbols_clause(c)) ==> (exists b :: (x,b) in c))
+  ensures (forall xb :: xb in c ==> xb.0 in symbols_clause(c))
+  ensures (forall x :: (x in symbols_clause(c)) ==> (exists b :: (x,b) in c))
 {
   if c == [] then {} else 
     assert forall xb :: xb in c ==> xb in {c[0]} || xb in c[1..];
@@ -38,9 +38,9 @@ predicate evaluate(q:query, r:valuation) {
   forall i :: 0 <= i < |q| ==> evaluate_clause(q[i], r)
 }
 
-///////////////////////////////////
-// TASK 1: Duplicate-free sequences
-///////////////////////////////////
+// ///////////////////////////////////
+// // TASK 1: Duplicate-free sequences
+// ///////////////////////////////////
 
 // holds if a sequence of symbols has no duplicates
 predicate dupe_free(xs:seq<symbol>) 
@@ -50,9 +50,11 @@ predicate dupe_free(xs:seq<symbol>)
 
 // Part (a): reversing a dupe-free sequence (recursive implementation)
 method rev(xs:seq<symbol>)
-returns (ys:seq<symbol>)
-requires dupe_free(xs)
-ensures dupe_free(ys)
+  returns (ys:seq<symbol>)
+  requires dupe_free(xs)
+  ensures dupe_free(ys)
+  ensures forall i :: 0 <= i < |xs| ==> xs[i] in ys
+  ensures forall i :: 0 <= i < |ys| ==> ys[i] in xs
 {
   if (xs == []) {
     ys := [];
@@ -62,24 +64,42 @@ ensures dupe_free(ys)
   }
 }
 
-// Part (b): reversing a dupe-free sequence (iterative implementation)
-method rev2(xs:seq<symbol>)
-returns (ys:seq<symbol>)
-requires dupe_free(xs)
-ensures dupe_free(ys)
+// Part (b):
+// Method to reverse the sequence, maintaining the properties specified
+method rev2(xs: seq<int>) returns (ys: seq<int>)
+  requires dupe_free(xs)
+  ensures dupe_free(ys)
+  ensures forall i :: 0 <= i < |xs| ==> xs[i] in ys
+  ensures forall i :: 0 <= i < |ys| ==> ys[i] in xs
+  decreases |xs|
 {
-  // ...?
+  var i := |xs| - 1;
+  ys := [];
+  while i >= 0
+    invariant dupe_free(ys)
+    invariant forall j :: 0 <= j <= i ==> xs[j] !in ys
+    invariant forall j :: 0 <= j < |ys| ==> ys[j] in xs
+    invariant forall j :: 0 <= j < |xs| ==> (xs[j] in ys) == (j > i)
+  {
+    ys := ys + [xs[i]];
+    i := i - 1;
+  }
 }
 
+// Counter Example of when not true: xs = [1,2,3], ys = [1,2,3]
 // Part (c): concatenating two dupe-free sequences
-lemma dupe_free_concat(xs:seq<symbol>, ys:seq<symbol>)
-requires dupe_free(xs)
-requires dupe_free(ys)
-//requires ...?
-ensures dupe_free (xs + ys)
+
+lemma dupe_free_concat(xs: seq<symbol>, ys: seq<symbol>)
+  requires dupe_free(xs)
+  requires dupe_free(ys)
+  requires forall x :: x in xs ==> x !in ys
+  ensures dupe_free(xs + ys)
 {
-  // ...?
+  // Assert that all elements in xs are distinct from those in ys
+  assert forall i :: 0 <= i < |xs| ==> xs[i] !in ys;
+
 }
+
 
 //////////////////////////////////////////
 // TASK 2: Extracting symbols from queries
@@ -87,7 +107,7 @@ ensures dupe_free (xs + ys)
 
 // remove the given set of symbols from a clause
 function remove_symbols_clause(c:clause, xs:set<symbol>) : clause
-ensures symbols_clause(remove_symbols_clause(c, xs)) == symbols_clause(c) - xs
+  ensures symbols_clause(remove_symbols_clause(c, xs)) == symbols_clause(c) - xs
 {
   if c == [] then [] else
     var c' := remove_symbols_clause(c[1..], xs);
@@ -96,7 +116,7 @@ ensures symbols_clause(remove_symbols_clause(c, xs)) == symbols_clause(c) - xs
 
 // remove the given set of symbols from a query
 function remove_symbols(q:query, xs:set<symbol>) : query
-ensures symbols(remove_symbols(q, xs)) == symbols(q) - xs
+  ensures symbols(remove_symbols(q, xs)) == symbols(q) - xs
 {
   if q == [] then [] else
     [remove_symbols_clause(q[0], xs)] + remove_symbols(q[1..], xs)
@@ -104,8 +124,9 @@ ensures symbols(remove_symbols(q, xs)) == symbols(q) - xs
 
 // Part (a): extract the sequence of symbols that appear in a clause
 function symbol_seq_clause(c:clause) : seq<symbol>
-ensures dupe_free(symbol_seq_clause(c))
-ensures forall x :: x in symbol_seq_clause(c) <==> x in symbols_clause(c)
+  ensures dupe_free(symbol_seq_clause(c))
+  ensures forall x :: x in symbols_clause(c) <==> x in symbol_seq_clause(c)
+  decreases |symbols_clause(c)|
 {
   if c == [] then [] else
     var x := c[0].0;
@@ -113,28 +134,39 @@ ensures forall x :: x in symbol_seq_clause(c) <==> x in symbols_clause(c)
     [x] + symbol_seq_clause(c')
 }
 
+
 // Part (b): extract the sequence of symbols that appear in a query
 function symbol_seq(q:query) : seq<symbol>
-ensures dupe_free(symbol_seq(q))
-ensures forall x :: x in symbol_seq(q) <==> x in symbols(q)
+  ensures dupe_free(symbol_seq(q))
+  ensures forall x :: x in symbol_seq(q) <==> x in symbols(q)
+  decreases |symbols(q)|
 {
   if q == [] then [] else
     var xs := symbols_clause(q[0]);
     var q' := remove_symbols(q[1..], xs);
-    symbol_seq_clause(q[0]) + symbol_seq(q')
+    var seq_clause := symbol_seq_clause(q[0]);
+    assert dupe_free(seq_clause);
+    assert forall x :: x in seq_clause <==> x in xs;
+    seq_clause + symbol_seq(q')
 }
 
 /////////////////////////////
 // TASK 3: Evaluating queries
 /////////////////////////////
 
+////// ********* Ask About Initialistation of result ********* //////
+
 // evaluate the given clause under the given valuation (imperative version)
 method eval_clause (c:clause, r:valuation) 
-returns (result: bool)
-ensures result == evaluate_clause(c,r)
+  returns (result: bool)
+  ensures result == evaluate_clause(c,r)
 {
   var i := 0;
-  while (i < |c|) {
+  result := false;
+  while (i < |c|) 
+    invariant 0 <= i <= |c|
+    invariant result == (exists j :: 0 <= j < i && c[j] in r.Items)
+  {
     if (c[i] in r.Items) {
       return true;
     }
@@ -145,12 +177,15 @@ ensures result == evaluate_clause(c,r)
 
 // evaluate the given query under the given valuation (imperative version)
 method eval(q:query, r:valuation) 
-returns (result: bool)
-ensures result == evaluate(q,r)
+  returns (result: bool)
+  ensures result == evaluate(q,r)
 {
   var i := 0;
-  while (i < |q|) {
-    result := eval_clause(q[i], r);
+  while (i < |q|)
+    invariant 0 <= i <= |q|
+    invariant forall j :: 0 <= j < i ==> evaluate_clause(q[j], r)
+  {
+    var result := eval_clause(q[i], r);
     if (!result) {
       return false;
     }
@@ -183,19 +218,22 @@ function mk_valuation_seq (xs: seq<symbol>) : seq<valuation>
 // valuations over the symbols that appear in the query, and then 
 // iterates through those valuations until it finds one that works.
 method naive_solve (q:query) 
-returns (sat:bool, r:valuation)
-ensures sat==true ==> evaluate(q,r)
-ensures sat==false ==> forall r:valuation :: r in mk_valuation_seq(symbol_seq(q)) ==> !evaluate(q,r)
+  returns (sat:bool, r:valuation)
+  ensures sat==true ==> evaluate(q,r)
+  ensures sat==false ==> forall r:valuation :: r in mk_valuation_seq(symbol_seq(q)) ==> !evaluate(q,r)
 {
   var xs := symbol_seq(q);
   var rs := mk_valuation_seq(xs);
   sat := false;
   var i := 0;
   while (i < |rs|) 
+    invariant 0 <= i <= |rs|
+    invariant !sat ==> forall j :: 0 <= j < i ==> !evaluate(q, rs[j])
   {
     sat := eval(q, rs[i]);
     if (sat) {
-      return true, rs[i];
+      r := rs[i];
+      return true, r;
     }
     i := i + 1;
   }
@@ -230,7 +268,7 @@ function update_query (x:symbol, b:bool, q:query) : query
 // Updating a query under the valuation x:=b is the same as updating 
 // the valuation itself and leaving the query unchanged.
 lemma evaluate_update_query(x:symbol, b:bool, r:valuation, q:query)
-requires x !in r.Keys
+  requires x !in r.Keys 
 ensures evaluate (update_query (x,b,q), r) == evaluate (q, r[x:=b])
 {
   // ...?
@@ -244,9 +282,9 @@ ensures evaluate (update_query (x,b,q), r) == evaluate (q, r[x:=b])
 // with that symbol evaluated to true, and one with it evaluated to false.
 // If neither recursive attempt succeeds, the query is unsatisfiable.
 method simp_solve (q:query)
-returns (sat:bool, r:valuation)
-ensures sat==true ==> evaluate(q,r)
-ensures sat==false ==> forall r :: !evaluate(q,r)
+  returns (sat:bool, r:valuation)
+  ensures sat==true ==> evaluate(q,r)
+  ensures sat==false ==> forall r :: !evaluate(q,r)
 {
   if (q == []) {
     return true, map[];
@@ -311,3 +349,4 @@ method Main ()
   sat, r := simp_solve(q4);
   print "solver = simp, q4 result = ", sat, ", valuation = ", r, "\n";
 }
+
