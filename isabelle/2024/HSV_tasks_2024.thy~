@@ -346,12 +346,6 @@ text \<open> A naive SAT solver. It works by constructing the list of all
   then iterating through that list until it finds the first valuation
   that makes the query true. If none of the valuations make the query
   true, it returns None. \<close>
-definition naive_solve :: "query \<Rightarrow> valuation option"
-where
-  "naive_solve q == 
-  let xs = symbol_list q in 
-  let \<rho>s = mk_valuation_list xs in
-  List.fold (until (evaluate q)) \<rho>s None"
 
 value "naive_solve q1"
 value "naive_solve q2"
@@ -367,8 +361,8 @@ proof(induct q)
   case Nil
   fix x
   have "evaluate [] x"
-    by (simp add: evaluate_def)
-  then show ?case sorry
+    try
+  then show ?case 
 next
   case (Cons a q)
   then show ?case sorry
