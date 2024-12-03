@@ -2,11 +2,11 @@
 // Modified by John Wickerson
 
 module multiplier (
-      input 	        rst,
-      input 	        clk,
-      input [7:0] 	  in1,
-      input [7:0] 	  in2,
-      output [15:0]   out
+    input 	        rst,
+    input 	        clk,
+    input [7:0] 	  in1,
+    input [7:0] 	  in2,
+    output [15:0]   out
                   );
   reg [3:0]  stage = 0;
   reg [15:0] accumulator = 0;
@@ -48,9 +48,6 @@ module multiplier (
 
 `ifdef FORMAL
 
-  reg [7:0] in1_initial = 0;
-  reg [7:0] in2_initial = 0;
-
   always @(posedge clk) begin
     // 1) 255*255+1 cannot be exceeded
     assert(out < 65026 && out >= 0); 
@@ -59,8 +56,8 @@ module multiplier (
     assert(stage == 0 || stage > $past(stage)); 
 
     // 3) if stage is 9 then output is in1 * in2
-    // if(stage == 9)
-    //   assert((stage == 9 && out == $past(in1,9) * $past(in2,9)));
+    if(stage == 9)
+      assert((stage == 9 && out == $past(in1,9) * $past(in2,9)));
 
     // 4) out should monotonically increase during the computation
     if (stage > 0)
@@ -82,14 +79,38 @@ module multiplier (
     end
   endgenerate
 
+  reg [7:0] in1_initial = 0;
+  reg [7:0] in2_initial = 0;
+
   always @(posedge clk) begin
     // 7. Prove that in1_shifted always holds the initial value of in1, shifted right by stage bits
     if (stage == 0) in1_initial <= in1;
-    assert property ((stage > 0) |-> in1_shifted ==  in1_initial >> (stage-1));
+    assert property ((stage > 0) |-> in1_shifted == in1_initial >> (stage-1));
 
     // 8. Prove that in2_shifted always holds the initial value of in2, shifted left by stage bits
     if (stage == 0) in2_initial <= in2;
-    assert property ((stage > 0) |-> in2_shifted ==  in2_initial << (stage-1));
+    assert property ((stage > 0) |-> in2_shifted == in2_initial << (stage-1));
+  end
+
+  // 9. Use a cover statement to prove that 13 is a prime number
+  parameter int NUMBER = 13;  // Number to check
+  parameter int MIN_DIVISOR = 2;  // Start checking from 2
+  parameter int MAX_DIVISOR = 12; // End checking at 12
+
+  logic [3:0] divisor;  // Divisor can be up to 4 bits for numbers 2-12
+  logic is_divisible;   // Flag to check divisibility
+
+  // Proof logic
+  always_comb begin
+      is_divisible = (NUMBER % divisor == 0); // Check if divisible
+  end
+
+  // Formal properties
+  initial begin
+    for (int i = MIN_DIVISOR; i <= MAX_DIVISOR; i++) begin
+      divisor = i;
+      cover(!is_divisible); // Cover all possible divisors
+    end
   end
 
 `endif
