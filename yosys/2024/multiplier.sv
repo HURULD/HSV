@@ -49,26 +49,35 @@ module multiplier (
 `ifdef FORMAL
 
   always @(posedge clk) begin
-    // 255*255+1 cannot be exceeded
+    // 1) 255*255+1 cannot be exceeded
     assert(out < 65026 && out >= 0); 
 
-    // stage is always increasing or wrap to zero
+    // 2) stage is always increasing or wrap to zero
     assert(stage == 0 || stage > $past(stage)); 
 
-    // if stage is 9 then output is in1 * in2
+    // 3) if stage is 9 then output is in1 * in2
     if(stage == 9)
       assert((stage == 9 && out == $past(in1,9) * $past(in2,9)));
 
-    // out should monatonically increase during the computation
+    // 4) out should monotonically increase during the computation
     if (stage > 0)
       assert(out >= $past(out));
 
-    // By the fourth stage of the computation (stage = 5) accumulator should be the lower 4 bits of in1 * in2
+    // 5) By the fourth stage of the computation (stage = 5) accumulator should be the lower 4 bits of in1 * in2
     if (stage == 5)
       assert(accumulator == $past(in2, 5) * $past(in1[3:0], 5));
-
-    
+  
   end
+
+  // 6) at stage n of the computation (stage = n+1) accumulator should be (lower n bits of in1) * in2
+  generate 
+    genvar stage_n;
+    for (stage_n = 2; stage_n < 10; stage_n++) begin
+      always @(posedge clk)
+        if (stage == stage_n)
+            assert(accumulator == $past(in2, stage_n) * $past(in1[stage_n-2:0], stage_n));
+    end
+  endgenerate
 
 `endif
 
