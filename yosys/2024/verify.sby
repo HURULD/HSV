@@ -1,9 +1,19 @@
+[tasks]
+kinduct kinduct_task
+cover cover_task
+all kinduct_task cover_task
+
 [options]
+kinduct_task:
 mode prove
 depth 100
+cover_task:
+mode cover
+depth 50
+--
 
 [engines]
-smtbmc
+smtbmc --unroll yices
 
 [script]
 read -formal multiplier.sv
