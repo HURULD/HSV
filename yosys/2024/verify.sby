@@ -1,14 +1,18 @@
 [tasks]
 kinduct kinduct_task
 cover cover_task
-all kinduct_task cover_task
+bmc bmc_task
+all kinduct_task cover_task bmc_task
 
 [options]
 kinduct_task:
 mode prove
-depth 100
+depth 10
 cover_task:
 mode cover
+depth 50
+bmc_task:
+mode bmc
 depth 50
 --
 

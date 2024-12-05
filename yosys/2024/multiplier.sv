@@ -95,22 +95,13 @@ module multiplier (
   // 9. Use a cover statement to prove that 13 is a prime number
   parameter int NUMBER = 13;  // Number to check
   parameter int MIN_DIVISOR = 2;  // Start checking from 2
-  parameter int MAX_DIVISOR = 12; // End checking at 12
-
-  logic [3:0] divisor;  // Divisor can be up to 4 bits for numbers 2-12
-  logic is_divisible;   // Flag to check divisibility
-
-  // Proof logic
-  always_comb begin
-      is_divisible = (NUMBER % divisor == 0); // Check if divisible
-  end
+  parameter int MAX_DIVISOR = NUMBER - 1; // End checking at N-1
 
   // Formal properties
-  initial begin
-    for (int i = MIN_DIVISOR; i <= MAX_DIVISOR; i++) begin
-      divisor = i;
-      cover(!is_divisible); // Cover all possible divisors
-    end
+  always @ (*) begin
+      for (int i = MIN_DIVISOR; i <= MAX_DIVISOR; i++) begin
+        cover(NUMBER % i != 0); // Cover all possible divisors
+      end
   end
 
 `endif
