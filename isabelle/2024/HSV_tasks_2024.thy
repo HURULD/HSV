@@ -363,22 +363,17 @@ text \<open> If the naive SAT solver returns a valuation, then that
 theorem naive_solve_correct_sat:
   assumes "naive_solve q = Some \<rho>"
   shows "evaluate q \<rho>"
-proof(induct q)
-  case Nil
-  fix x
-  have "evaluate [] x"
-    by (simp add: evaluate_def)
-  then show ?case sorry
-next
-  case (Cons a q)
-  then show ?case sorry
-qed
+  (*If naive_solve returns a solution then if we can prove it has checked all possible
+  perumations on the input space then whatever it returns must be correct*)
+  sorry
 
 text \<open> If the naive SAT solver returns no valuation, then none of the valuations 
   it tried make the query true. \<close>
 theorem naive_solve_correct_unsat:
   assumes "naive_solve q = None"
   shows "\<forall>\<rho> \<in> set (mk_valuation_list (symbol_list q)). \<not> evaluate q \<rho>" 
+  (*Similar proof to previous, assuming naive_solve has covered the entire input space
+   if it returns None then the clauses must not be satisfiable *)
   sorry
 
 section \<open> Task 6: Verifying a simple SAT solver. \<close>

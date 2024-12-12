@@ -346,6 +346,12 @@ text \<open> A naive SAT solver. It works by constructing the list of all
   then iterating through that list until it finds the first valuation
   that makes the query true. If none of the valuations make the query
   true, it returns None. \<close>
+definition naive_solve :: "query \<Rightarrow> valuation option"
+where
+  "naive_solve q == 
+  let xs = symbol_list q in 
+  let \<rho>s = mk_valuation_list xs in
+  List.fold (until (evaluate q)) \<rho>s None"
 
 value "naive_solve q1"
 value "naive_solve q2"
@@ -357,16 +363,7 @@ text \<open> If the naive SAT solver returns a valuation, then that
 theorem naive_solve_correct_sat:
   assumes "naive_solve q = Some \<rho>"
   shows "evaluate q \<rho>"
-proof(induct q)
-  case Nil
-  fix x
-  have "evaluate [] x"
-    try
-  then show ?case 
-next
-  case (Cons a q)
-  then show ?case sorry
-qed
+  sorry
 
 text \<open> If the naive SAT solver returns no valuation, then none of the valuations 
   it tried make the query true. \<close>
